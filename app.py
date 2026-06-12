@@ -3,13 +3,14 @@ import pandas as pd
 import sqlalchemy
 import plotly.express as px
 import urllib.parse
+import queries
 
 # 1. CONFIGURACIÓN DE LA PÁGINA
 # Esto debe ser lo primero que se ejecuta en Streamlit
-st.set_page_config(page_title="Dashboard Northwind", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Crashes Dashboard", page_icon="🚗", layout="wide")
 
-st.title("📊 Dashboard Universitario - Base de Datos Northwind")
-st.markdown("Bienvenido a mi portafolio de Ingeniería de Datos. Aquí visualizamos consultas SQL complejas ejecutadas en tiempo real.")
+st.title(" Dashboard Analítico - Accidentes de Tránsito")
+st.markdown("Bienvenido a mi portafolio de Ingeniería de Datos. Exploración interactiva de datos de colisiones vehiculares.")
 
 # 2. CONEXIÓN A LA BASE DE DATOS
 # st.cache_resource hace que la conexión se abra una sola vez y no cada vez que haces clic
@@ -55,99 +56,89 @@ st.sidebar.header("Menú de Reportes")
 opcion = st.sidebar.selectbox(
     "Selecciona el análisis:",
     ["1. Visión General", 
-     "2. Facturación por Categoría (JOIN de 5 tablas)", 
-     "3. Rendimiento de Empleados (Window Functions)",
-     "4. Consola SQL Interactiva",
-     "5. Explorador de Esquema (Diccionario)"]
+     "2. Reportes Predefinidos",
+     "3. Consola SQL Libre",
+     "4. Diagrama de Base de Datos (ERD)"]
 )
 
 st.divider()
 
 # 4. LÓGICA DE LAS VISTAS
 if opcion == "1. Visión General":
-    st.subheader("👋 Visión General del Proyecto")
-    st.write("Usa el menú de la izquierda para navegar entre los diferentes reportes SQL generados dinámicamente.")
+    st.title("🏙️ Análisis de Seguridad Vial en Chicago")
+    st.markdown("---")
     
-elif opcion == "2. Facturación por Categoría (JOIN de 5 tablas)":
-    st.subheader("📦 Ventas Totales por Categoría de Producto")
-    st.write("Esta consulta encadena `Customers`, `Orders`, `Order Details`, `Products` y `Categories`.")
+    col1, col2 = st.columns([1.5, 1])
     
-    # Esta es tu consulta extraída del PDF ID9_1 (JOINs Encadenados)
-    query_facturacion = """
-        SELECT 
-            CAT.CategoryName AS Categoria, 
-            SUM(OD.Quantity * OD.UnitPrice) AS Ingreso_Total
-        FROM Customers AS C
-        JOIN Orders AS O ON O.CustomerID = C.CustomerID
-        JOIN [Order Details] AS OD ON OD.OrderID = O.OrderID
-        JOIN Products AS P ON P.ProductID = OD.ProductID
-        JOIN Categories AS CAT ON CAT.CategoryID = P.CategoryID
-        GROUP BY CAT.CategoryName
-        ORDER BY Ingreso_Total DESC;
-    """
-    
-    # Ejecutamos la consulta y la guardamos en un DataFrame de Pandas
-    try:
-        df_cat = obtener_datos(query_facturacion)
+    with col1:
+        st.subheader("📌 Contexto del Proyecto")
+        st.markdown("""
+        La seguridad vial representa uno de los principales retos de salud y seguridad pública que enfrentan las grandes ciudades en Estados Unidos. **Chicago**, como tercera ciudad más poblada del país, concentra una densa red de vías urbanas con alto flujo de vehículos, peatones y ciclistas.
         
-        if df_cat.empty:
+        Según datos del Departamento de Transporte de Illinois (2024), la ciudad registra anualmente decenas de miles de siniestros viales. Los accidentes no se distribuyen de manera uniforme, sino que responden a factores como:
+        * Estado de la infraestructura vial.
+        * Condiciones climáticas e Iluminación.
+        * Patrones de movilidad y comportamiento de los conductores.
+        """)
+        
+    with col2:
+        st.info("""
+        **🎯 Sobre la Base de Datos:**
+        Registra accidentes ocurridos en vías públicas bajo la jurisdicción del Departamento de Policía local.
+        
+        Vincula cada siniestro con su contexto físico, ambiental, causal y humano de manera holística, permitiendo identificar patrones temporales, espaciales y causales.
+        """)
+        
+    st.markdown("---")
+    st.subheader("🚀 Propósito del Análisis")
+    st.markdown("""
+    El propósito del presente informe es analizar la base de datos con el fin de **apoyar a la toma de decisiones en materia de seguridad vial pública**, mediante la identificación de factores de riesgo y patrones recurrentes.
+    """)
+    st.success("✅ **Caracterizar** los accidentes según sus condiciones de ocurrencia.\n\n✅ **Geolocalizar** zonas críticas con base en el nivel de incidencia.\n\n✅ **Analizar el impacto humano** de los accidentes en relación a sus condiciones.\n\n✅ **Identificar patrones temporales** para orientar operativos preventivos.\n\n✅ **Determinar las causas** más frecuentes y peligrosas.")
+
+elif opcion == "2. Accidentes por Clima (JOIN)":
+    st.subheader("⛈️ Impacto del Clima en los Accidentes")
+    st.write("Esta consulta relaciona la tabla de hechos `CRASH` con la dimensión `WEATHER`.")
+    
+    try:
+        df_clima = obtener_datos(queries.QUERY_CLIMA)
+        
+        if df_clima.empty:
             st.warning("La consulta se ejecutó, pero no devolvió datos.")
             st.stop()
 
         col1, col2 = st.columns([1, 2]) # El gráfico será el doble de ancho que la tabla
         
         with col1:
-            st.dataframe(df_cat, use_container_width=True)
+            st.dataframe(df_clima, use_container_width=True)
             
         with col2:
             # Gráfico de barras interactivo con Plotly
-            fig = px.bar(df_cat, x='Categoria', y='Ingreso_Total', 
-                         title="Ingresos por Categoría",
-                         color='Ingreso_Total', 
-                         color_continuous_scale='Viridis')
+            fig = px.bar(df_clima, x='Clima', y='Total_Accidentes', 
+                         title="Accidentes según Condición Climática",
+                         color='Total_Accidentes', 
+                         color_continuous_scale='Reds')
             st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
         st.error(f"❌ Error al ejecutar la consulta SQL: {e}")
 
-elif opcion == "3. Rendimiento de Empleados (Window Functions)":
-    st.subheader("🏆 Aporte de Empleados al Total del País")
-    
-    # Esta es una adaptación de tu PDF de Window Functions
-    query_empleados = """
-        WITH VentasBase AS (
-            SELECT 
-                E.FirstName + ' ' + E.LastName AS Empleado, 
-                E.Country AS Pais,
-                SUM(OD.Quantity * OD.UnitPrice * (1 - OD.Discount)) AS TotalEmpleado 
-            FROM Employees AS E 
-            JOIN Orders AS O ON O.EmployeeID = E.EmployeeID 
-            JOIN [Order Details] AS OD ON OD.OrderID = O.OrderID 
-            GROUP BY E.EmployeeID, E.FirstName, E.LastName, E.Country
-        )
-        SELECT 
-            Empleado, 
-            Pais, 
-            TotalEmpleado,
-            SUM(TotalEmpleado) OVER(PARTITION BY Pais) AS TotalPais
-        FROM VentasBase
-        ORDER BY Pais, TotalEmpleado DESC;
-    """
+elif opcion == "3. Severidad de Lesiones (Agrupaciones)":
+    st.subheader("🏥 Análisis de Severidad de Lesiones")
     
     try:
-        df_emp = obtener_datos(query_empleados)
+        df_lesiones = obtener_datos(queries.QUERY_LESIONES)
         
-        if df_emp.empty:
+        if df_lesiones.empty:
             st.warning("La consulta se ejecutó, pero no devolvió datos.")
             st.stop()
 
-        # Creamos un gráfico de 'Sunburst' (Dona jerárquica) para ver País -> Empleado
-        fig2 = px.sunburst(df_emp, path=['Pais', 'Empleado'], values='TotalEmpleado',
-                           title="Distribución de Ventas: País vs Empleado")
+        fig2 = px.pie(df_lesiones, names='Severidad', values='Total_Lesionados', hole=0.4,
+                      title="Proporción de Tipos de Severidad en Lesionados")
         
         st.plotly_chart(fig2, use_container_width=True)
         
-        with st.expander("Ver tabla de datos (Window Functions aplicadas)"):
-            st.dataframe(df_emp, use_container_width=True)
+        with st.expander("Ver tabla de datos"):
+            st.dataframe(df_lesiones, use_container_width=True)
     except Exception as e:
         st.error(f"❌ Error al ejecutar la consulta SQL: {e}")
 
@@ -155,9 +146,20 @@ elif opcion == "4. Consola SQL Interactiva":
     st.subheader("💻 Consola SQL Interactiva")
     st.write("Escribe tu propia consulta SQL para explorar la base de datos en tiempo real.")
     
+    # Selector de consultas precargadas
+    consulta_predefinida = st.selectbox(
+        "💡 Selecciona una consulta de ejemplo o escribe la tuya:",
+        list(queries.CONSULTAS_INTERACTIVAS.keys())
+    )
+    texto_default = queries.CONSULTAS_INTERACTIVAS[consulta_predefinida]
+
     # Área de texto para que el usuario escriba su consulta
-    query_usuario = st.text_area("Ingresa tu consulta SQL aquí (Ej: SELECT TOP 10 * FROM Customers):", height=200)
+    query_usuario = st.text_area("Ingresa tu consulta SQL aquí (Soporta comentarios):", value=texto_default, height=200)
     
+    # Inicializar el estado de la sesión si no existe
+    if 'df_custom' not in st.session_state:
+        st.session_state['df_custom'] = None
+
     # Botón para ejecutar
     if st.button("🚀 Ejecutar Consulta"):
         if query_usuario.strip() != "":
@@ -168,58 +170,102 @@ elif opcion == "4. Consola SQL Interactiva":
                         resultado = conn.execute(sqlalchemy.text(query_usuario))
                         filas = resultado.fetchall()
                         
-                        # Extraemos los nombres de las columnas y renombramos los duplicados agregando un sufijo
-                        columnas = resultado.keys()
-                        columnas_limpias = []
-                        vistos = {}
-                        for col in columnas:
-                            if col in vistos:
-                                vistos[col] += 1
-                                columnas_limpias.append(f"{col}_{vistos[col]}")
-                            else:
-                                vistos[col] = 0
-                                columnas_limpias.append(col)
-                                
-                        df_custom = pd.DataFrame(filas, columns=columnas_limpias)
+                        if filas:
+                            # Extraemos los nombres de las columnas y renombramos los duplicados agregando un sufijo
+                            columnas = resultado.keys()
+                            columnas_limpias = []
+                            vistos = {}
+                            for col in columnas:
+                                if col in vistos:
+                                    vistos[col] += 1
+                                    columnas_limpias.append(f"{col}_{vistos[col]}")
+                                else:
+                                    vistos[col] = 0
+                                    columnas_limpias.append(col)
+                                    
+                            df_custom = pd.DataFrame(filas, columns=columnas_limpias)
+                            st.session_state['df_custom'] = df_custom
+                        else:
+                            # Si la consulta se ejecutó pero no trajo resultados (ej. SELECT sin match)
+                            st.session_state['df_custom'] = pd.DataFrame()
                 
-                if df_custom.empty:
-                    st.warning("La consulta se ejecutó correctamente, pero no devolvió ninguna fila.")
-                else:
-                    st.success(f"✅ Consulta ejecutada con éxito. Se recuperaron {len(df_custom)} filas.")
-                    st.dataframe(df_custom, use_container_width=True)
-                    
-                    # Plus profesional: Botón de descarga de los resultados
-                    csv = df_custom.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📥 Descargar resultados en CSV",
-                        data=csv,
-                        file_name='resultados_personalizados.csv',
-                        mime='text/csv',
-                    )
             except Exception as e:
                 st.error(f"❌ Error de sintaxis o de base de datos: {e}")
+                st.session_state['df_custom'] = None
         else:
             st.warning("⚠️ Por favor, escribe una consulta SQL antes de presionar el botón.")
+            
+    # --- RENDERIZADO FUERA DEL BOTÓN (Para que sea interactivo) ---
+    if st.session_state['df_custom'] is not None:
+        df_custom = st.session_state['df_custom']
+        
+        if df_custom.empty:
+            st.success("✅ La consulta se ejecutó correctamente (ej. contenía solo comentarios o no retornaba filas).")
+        else:
+            st.success(f"✅ Consulta en memoria. Se recuperaron {len(df_custom)} filas.")
+            
+            with st.expander("Ver tabla de resultados", expanded=False):
+                st.dataframe(df_custom, use_container_width=True)
+                csv = df_custom.to_csv(index=False).encode('utf-8')
+                st.download_button("📥 Descargar resultados en CSV", data=csv, file_name='query_libre.csv', mime='text/csv')
+            
+            st.divider()
+            st.subheader("🎨 Generador de Gráficos Libre")
+            
+            # Controles a la izquierda (1/4 del ancho) y Gráfico a la derecha (3/4 del ancho)
+            col_controles, col_grafico = st.columns([1, 3])
+            
+            with col_controles:
+                st.write("⚙️ **Opciones de Gráfico**")
+                col_opciones = df_custom.columns.tolist()
+                tipo_grafico = st.selectbox("Tipo de gráfico", ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel"])
+                
+                if tipo_grafico != "Ninguno":
+                    eje_x = st.selectbox("Eje X (o Nombres)", col_opciones, index=0)
+                    eje_y = st.selectbox("Eje Y (o Valores)", col_opciones, index=len(col_opciones)-1 if len(col_opciones)>1 else 0)
+            
+            with col_grafico:
+                if tipo_grafico != "Ninguno":
+                    try:
+                        if tipo_grafico == "Barras":
+                            fig_dinamica = px.bar(df_custom, x=eje_x, y=eje_y, color=eje_x)
+                        elif tipo_grafico == "Líneas":
+                            fig_dinamica = px.line(df_custom, x=eje_x, y=eje_y, markers=True)
+                        elif tipo_grafico == "Dispersión":
+                            fig_dinamica = px.scatter(df_custom, x=eje_x, y=eje_y, color=eje_y, size=eje_y)
+                        elif tipo_grafico == "Pastel":
+                            fig_dinamica = px.pie(df_custom, names=eje_x, values=eje_y, hole=0.3)
+                        
+                        st.plotly_chart(fig_dinamica, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"❌ No se pudo generar el gráfico con estas columnas. Intenta cambiar los ejes. Detalle: {e}")
+                else:
+                    st.info("👈 Selecciona un tipo de gráfico en el menú izquierdo para visualizar los datos.")
 
-elif opcion == "5. Explorador de Esquema (Diccionario)":
-    st.subheader("🗂️ Explorador de Base de Datos")
-    st.write("Explora las tablas y columnas disponibles en la base de datos de SQL Server (Alternativa a `.schema`).")
+elif opcion == "4. Diagrama de Base de Datos (ERD)":
+    st.subheader("🕸️ Diagrama de Base de Datos (ERD)")
+    st.write("Este diagrama se genera automáticamente leyendo las relaciones (Llaves Foráneas) de la base de datos conectada.")
     
-    # Consultamos la lista de tablas en la base de datos
-    query_tablas = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME"
     try:
-        df_tablas = obtener_datos(query_tablas)
-        lista_tablas = df_tablas['TABLE_NAME'].tolist()
-        
-        tabla_seleccionada = st.selectbox("Selecciona una tabla para ver su estructura:", lista_tablas)
-        
-        if tabla_seleccionada:
-            query_columnas = f"""
-                SELECT COLUMN_NAME as Columna, DATA_TYPE as Tipo_Dato, CHARACTER_MAXIMUM_LENGTH as Longitud_Max
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = '{tabla_seleccionada}'
-            """
-            df_columnas = obtener_datos(query_columnas)
-            st.dataframe(df_columnas, use_container_width=True)
+        with st.spinner("Generando diagrama relacional..."):
+            df_fks = obtener_datos(queries.QUERY_FKS)
+            df_tables = obtener_datos(queries.QUERY_TABLES)
+            
+            # Construimos un string en formato DOT para que Streamlit grafique
+            dot_code = 'digraph ERD {\n'
+            dot_code += 'rankdir=LR;\n'
+            dot_code += 'node [shape=box, style=filled, color=lightblue, fontname="Arial"];\n'
+            
+            for index, row in df_tables.iterrows():
+                dot_code += f'"{row["TableName"]}";\n'
+                
+            for index, row in df_fks.iterrows():
+                dot_code += f'"{row["ParentTable"]}" -> "{row["RefTable"]}" [label="{row["ParentColumn"]} -> {row["RefColumn"]}", fontsize=9];\n'
+                
+            dot_code += '}'
+            
+            # Pasamos la cadena de texto directamente a la función nativa de Streamlit
+            st.graphviz_chart(dot_code, use_container_width=True)
+            
     except Exception as e:
-        st.error(f"❌ Error al consultar el esquema: {e}")
+        st.error(f"❌ Error al generar el diagrama: {e}")
