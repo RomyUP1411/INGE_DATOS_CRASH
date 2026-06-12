@@ -57,7 +57,8 @@ opcion = st.sidebar.selectbox(
     ["1. Visión General", 
      "2. Facturación por Categoría (JOIN de 5 tablas)", 
      "3. Rendimiento de Empleados (Window Functions)",
-     "4. Consola SQL Interactiva"]
+     "4. Consola SQL Interactiva",
+     "5. Explorador de Esquema (Diccionario)"]
 )
 
 st.divider()
@@ -162,8 +163,24 @@ elif opcion == "4. Consola SQL Interactiva":
         if query_usuario.strip() != "":
             try:
                 with st.spinner("Ejecutando tu consulta en el servidor..."):
-                    # Usamos pd.read_sql directamente (sin caché) para que siempre refleje lo que acabas de escribir
-                    df_custom = pd.read_sql(query_usuario, engine)
+                    # Usamos una ejecución manual con SQLAlchemy para manejar columnas duplicadas (ej: en SELECT * con JOIN)
+                    with engine.connect() as conn:
+                        resultado = conn.execute(sqlalchemy.text(query_usuario))
+                        filas = resultado.fetchall()
+                        
+                        # Extraemos los nombres de las columnas y renombramos los duplicados agregando un sufijo
+                        columnas = resultado.keys()
+                        columnas_limpias = []
+                        vistos = {}
+                        for col in columnas:
+                            if col in vistos:
+                                vistos[col] += 1
+                                columnas_limpias.append(f"{col}_{vistos[col]}")
+                            else:
+                                vistos[col] = 0
+                                columnas_limpias.append(col)
+                                
+                        df_custom = pd.DataFrame(filas, columns=columnas_limpias)
                 
                 if df_custom.empty:
                     st.warning("La consulta se ejecutó correctamente, pero no devolvió ninguna fila.")
@@ -183,3 +200,26 @@ elif opcion == "4. Consola SQL Interactiva":
                 st.error(f"❌ Error de sintaxis o de base de datos: {e}")
         else:
             st.warning("⚠️ Por favor, escribe una consulta SQL antes de presionar el botón.")
+
+elif opcion == "5. Explorador de Esquema (Diccionario)":
+    st.subheader("🗂️ Explorador de Base de Datos")
+    st.write("Explora las tablas y columnas disponibles en la base de datos de SQL Server (Alternativa a `.schema`).")
+    
+    # Consultamos la lista de tablas en la base de datos
+    query_tablas = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME"
+    try:
+        df_tablas = obtener_datos(query_tablas)
+        lista_tablas = df_tablas['TABLE_NAME'].tolist()
+        
+        tabla_seleccionada = st.selectbox("Selecciona una tabla para ver su estructura:", lista_tablas)
+        
+        if tabla_seleccionada:
+            query_columnas = f"""
+                SELECT COLUMN_NAME as Columna, DATA_TYPE as Tipo_Dato, CHARACTER_MAXIMUM_LENGTH as Longitud_Max
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_NAME = '{tabla_seleccionada}'
+            """
+            df_columnas = obtener_datos(query_columnas)
+            st.dataframe(df_columnas, use_container_width=True)
+    except Exception as e:
+        st.error(f"❌ Error al consultar el esquema: {e}")
