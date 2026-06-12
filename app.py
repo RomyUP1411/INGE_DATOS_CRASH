@@ -96,54 +96,77 @@ if opcion == "1. Visión General":
     """)
     st.success("✅ **Caracterizar** los accidentes según sus condiciones de ocurrencia.\n\n✅ **Geolocalizar** zonas críticas con base en el nivel de incidencia.\n\n✅ **Analizar el impacto humano** de los accidentes en relación a sus condiciones.\n\n✅ **Identificar patrones temporales** para orientar operativos preventivos.\n\n✅ **Determinar las causas** más frecuentes y peligrosas.")
 
-elif opcion == "2. Accidentes por Clima (JOIN)":
-    st.subheader("⛈️ Impacto del Clima en los Accidentes")
-    st.write("Esta consulta relaciona la tabla de hechos `CRASH` con la dimensión `WEATHER`.")
+elif opcion == "2. Reportes Predefinidos":
+    st.subheader("📊 Reportes Analíticos")
     
+    reporte_seleccionado = st.selectbox(
+        "Selecciona el reporte a visualizar:",
+        list(queries.REPORTES_ACADEMICOS.keys())
+    )
+    
+    datos_reporte = queries.REPORTES_ACADEMICOS[reporte_seleccionado]
+    query_sql = datos_reporte["sql"]
+    
+    with st.expander("🔍 Ver código SQL utilizado"):
+        st.code(query_sql, language="sql")
+        
     try:
-        df_clima = obtener_datos(queries.QUERY_CLIMA)
-        
-        if df_clima.empty:
-            st.warning("La consulta se ejecutó, pero no devolvió datos.")
-            st.stop()
-
-        col1, col2 = st.columns([1, 2]) # El gráfico será el doble de ancho que la tabla
-        
-        with col1:
-            st.dataframe(df_clima, use_container_width=True)
+        with st.spinner("Ejecutando modelo analítico..."):
+            df_reporte = obtener_datos(query_sql)
             
-        with col2:
-            # Gráfico de barras interactivo con Plotly
-            fig = px.bar(df_clima, x='Clima', y='Total_Accidentes', 
-                         title="Accidentes según Condición Climática",
-                         color='Total_Accidentes', 
-                         color_continuous_scale='Reds')
-            st.plotly_chart(fig, use_container_width=True)
+        if df_reporte.empty:
+            st.warning("La consulta se ejecutó correctamente, pero no devolvió ninguna fila.")
+        else:
+            st.success(f"✅ Consulta exitosa. Se recuperaron {len(df_reporte)} registros.")
+            
+            with st.expander("Ver tabla de resultados", expanded=False):
+                st.dataframe(df_reporte, use_container_width=True)
+                csv = df_reporte.to_csv(index=False).encode('utf-8')
+                st.download_button("📥 Descargar resultados en CSV", data=csv, file_name='reporte.csv', mime='text/csv')
+            
+            st.divider()
+            st.subheader("🎨 Configuración Visual")
+            
+            mapa_tipos = {"bar": "Barras", "line": "Líneas", "scatter": "Dispersión", "pie": "Pastel", "none": "Ninguno"}
+            tipo_defecto = mapa_tipos.get(datos_reporte.get("chart", "none"), "Ninguno")
+            
+            col_controles, col_grafico = st.columns([1, 3])
+            with col_controles:
+                st.write("⚙️ **Opciones de Gráfico**")
+                col_opciones = df_reporte.columns.tolist()
+                
+                opciones_graficas = ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel"]
+                idx_tipo = opciones_graficas.index(tipo_defecto) if tipo_defecto in opciones_graficas else 0
+                tipo_grafico = st.selectbox("Tipo de gráfico", opciones_graficas, index=idx_tipo)
+                
+                if tipo_grafico != "Ninguno":
+                    idx_x = col_opciones.index(datos_reporte["x"]) if datos_reporte.get("x") in col_opciones else 0
+                    eje_x = st.selectbox("Eje X (o Nombres)", col_opciones, index=idx_x)
+                    
+                    idx_y = col_opciones.index(datos_reporte["y"]) if datos_reporte.get("y") in col_opciones else (len(col_opciones)-1 if len(col_opciones)>1 else 0)
+                    eje_y = st.selectbox("Eje Y (o Valores)", col_opciones, index=idx_y)
+            
+            with col_grafico:
+                if tipo_grafico != "Ninguno":
+                    try:
+                        if tipo_grafico == "Barras":
+                            fig = px.bar(df_reporte, x=eje_x, y=eje_y, color=eje_x)
+                        elif tipo_grafico == "Líneas":
+                            fig = px.line(df_reporte, x=eje_x, y=eje_y, markers=True)
+                        elif tipo_grafico == "Dispersión":
+                            fig = px.scatter(df_reporte, x=eje_x, y=eje_y, color=eje_y, size=eje_y)
+                        elif tipo_grafico == "Pastel":
+                            fig = px.pie(df_reporte, names=eje_x, values=eje_y, hole=0.3)
+                        st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"❌ No se pudo generar el gráfico con estas columnas. Intenta cambiar los ejes. Detalle: {e}")
+                else:
+                    st.info("👈 Selecciona un tipo de gráfico en el menú izquierdo para visualizar los datos.")
     except Exception as e:
-        st.error(f"❌ Error al ejecutar la consulta SQL: {e}")
+        st.error(f"❌ Error de base de datos: {e}")
 
-elif opcion == "3. Severidad de Lesiones (Agrupaciones)":
-    st.subheader("🏥 Análisis de Severidad de Lesiones")
-    
-    try:
-        df_lesiones = obtener_datos(queries.QUERY_LESIONES)
-        
-        if df_lesiones.empty:
-            st.warning("La consulta se ejecutó, pero no devolvió datos.")
-            st.stop()
-
-        fig2 = px.pie(df_lesiones, names='Severidad', values='Total_Lesionados', hole=0.4,
-                      title="Proporción de Tipos de Severidad en Lesionados")
-        
-        st.plotly_chart(fig2, use_container_width=True)
-        
-        with st.expander("Ver tabla de datos"):
-            st.dataframe(df_lesiones, use_container_width=True)
-    except Exception as e:
-        st.error(f"❌ Error al ejecutar la consulta SQL: {e}")
-
-elif opcion == "4. Consola SQL Interactiva":
-    st.subheader("💻 Consola SQL Interactiva")
+elif opcion == "3. Consola SQL Libre":
+    st.subheader("💻 Consola SQL Libre")
     st.write("Escribe tu propia consulta SQL para explorar la base de datos en tiempo real.")
     
     # Selector de consultas precargadas
