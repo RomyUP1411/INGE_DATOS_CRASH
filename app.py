@@ -18,19 +18,24 @@ st.markdown("Bienvenido a mi portafolio de Ingeniería de Datos. Exploración in
 def iniciar_conexion():
     server = st.secrets["db_server"]
     database = st.secrets["db_name"]
-    username = st.secrets["db_user"]
-    password = st.secrets["db_pass"]
+    
+    # Usar get() permite que las credenciales sean opcionales para usar Autenticación de Windows
+    username = st.secrets.get("db_user", "")
+    password = st.secrets.get("db_pass", "")
     
     # Permite especificar el driver desde secrets (por defecto ODBC Driver 17)
     # Esto es útil por si la PC de la universidad tiene otra versión instalada.
     driver = st.secrets.get("db_driver", "ODBC Driver 17 for SQL Server")
     driver = driver.replace(" ", "+") # Formato seguro para la URL
 
-    # Codificamos la contraseña por si tiene caracteres especiales como @, #, etc.
-    password_encoded = urllib.parse.quote_plus(password)
-    
-    # Agregamos timeout=10 para que no se quede colgado eternamente si la IP no responde
-    cadena_conexion = f"mssql+pyodbc://{username}:{password_encoded}@{server}/{database}?driver={driver}&TrustServerCertificate=yes&timeout=10"
+    if username and password:
+        # Autenticación SQL Server
+        password_encoded = urllib.parse.quote_plus(password)
+        cadena_conexion = f"mssql+pyodbc://{username}:{password_encoded}@{server}/{database}?driver={driver}&TrustServerCertificate=yes&timeout=10"
+    else:
+        # Autenticación de Windows (Trusted_Connection=yes)
+        cadena_conexion = f"mssql+pyodbc://@{server}/{database}?driver={driver}&Trusted_Connection=yes&TrustServerCertificate=yes&timeout=10"
+        
     motor = sqlalchemy.create_engine(cadena_conexion)
     return motor
 
