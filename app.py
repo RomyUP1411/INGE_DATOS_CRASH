@@ -322,24 +322,53 @@ elif opcion == "3. Entorno de Consultas Ad-Hoc":
                     st.info("👈 Utilice el panel lateral izquierdo para configurar la visualización deseada.")
 
 elif opcion == "4. Modelo Relacional (ERD)":
-    st.subheader("🕸️ Modelo de Entidad-Relación (ERD)")
+    st.subheader("🕸️ Diagrama de Base de Datos")
     st.write("Representación estructurada generada automáticamente a partir de las restricciones de integridad referencial (Foreign Keys) del esquema actual.")
     
     try:
         with st.spinner("Mapeando topología de la base de datos..."):
             df_fks = obtener_datos(queries.QUERY_FKS)
-            df_tables = obtener_datos(queries.QUERY_TABLES)
+            df_cols = obtener_datos(queries.QUERY_COLUMNS)
             
-            # Construimos un string en formato DOT para que Streamlit grafique
+            # Construimos un string en formato DOT con tablas HTML
             dot_code = 'digraph ERD {\n'
             dot_code += 'rankdir=LR;\n'
-            dot_code += 'node [shape=box, style=filled, color=lightblue, fontname="Arial"];\n'
+            dot_code += 'node [shape=none, fontname="Helvetica", fontsize=10, margin=0];\n'
+            dot_code += 'edge [fontname="Helvetica", fontsize=9, color="#555555", dir=forward];\n'
             
-            for index, row in df_tables.iterrows():
-                dot_code += f'"{row["TableName"]}";\n'
+            tables = df_cols['TableName'].unique()
+            for table in tables:
+                table_data = df_cols[df_cols['TableName'] == table]
                 
-            for index, row in df_fks.iterrows():
-                dot_code += f'"{row["ParentTable"]}" -> "{row["RefTable"]}" [label="{row["ParentColumn"]} -> {row["RefColumn"]}", fontsize=9];\n'
+                # Definición de la tabla en formato HTML para Graphviz
+                html = f'<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">'
+                html += f'<tr><td bgcolor="#1772E9"><font color="white"><b>{table}</b></font></td></tr>'
+                
+                for _, row in table_data.iterrows():
+                    col_name = row['ColumnName']
+                    data_type = row['DataType']
+                    is_pk = row['IsPrimaryKey'] == 1
+                    
+                    # Verifica si la columna es FK buscando en el dataframe de relaciones
+                    is_fk = not df_fks[(df_fks['ParentTable'] == table) & (df_fks['ParentColumn'] == col_name)].empty
+                    
+                    key_str = " <b>[PK, FK]</b>" if (is_pk and is_fk) else (" <b>[PK]</b>" if is_pk else (" <i>[FK]</i>" if is_fk else ""))
+                        
+                    # El "port" permite conectar las flechas directamente a esta fila de la tabla
+                    port_name = str(col_name).replace(" ", "_")
+                    html += f'<tr><td align="left" port="{port_name}">{col_name}{key_str} <font color="#666666"><i>{data_type}</i></font></td></tr>'
+                    
+                html += '</table>>'
+                dot_code += f'"{table}" [label={html}];\n'
+                
+            for _, row in df_fks.iterrows():
+                parent_table = row["ParentTable"]
+                parent_col = str(row["ParentColumn"]).replace(" ", "_")
+                ref_table = row["RefTable"]
+                ref_col = str(row["RefColumn"]).replace(" ", "_")
+                
+                # Crea la relación apuntando desde la columna FK directamente a la columna PK
+                dot_code += f'"{parent_table}":"{parent_col}" -> "{ref_table}":"{ref_col}";\n'
                 
             dot_code += '}'
             

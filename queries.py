@@ -36,6 +36,24 @@ QUERY_FKS = """
 
 QUERY_TABLES = "SELECT name AS TableName FROM sys.tables"
 
+QUERY_COLUMNS = """
+    SELECT 
+        c.TABLE_NAME AS TableName,
+        c.COLUMN_NAME AS ColumnName,
+        c.DATA_TYPE AS DataType,
+        CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IsPrimaryKey
+    FROM INFORMATION_SCHEMA.COLUMNS c
+    INNER JOIN sys.tables t ON c.TABLE_NAME = t.name
+    LEFT JOIN (
+        SELECT ku.TABLE_NAME, ku.COLUMN_NAME
+        FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
+        INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS ku
+            ON tc.CONSTRAINT_TYPE = 'PRIMARY KEY' 
+            AND tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
+    ) pk ON c.TABLE_NAME = pk.TABLE_NAME AND c.COLUMN_NAME = pk.COLUMN_NAME
+    ORDER BY c.TABLE_NAME, c.ORDINAL_POSITION;
+"""
+
 # Consultas interactivas predefinidas para la consola
 CONSULTAS_INTERACTIVAS = {
     "--- Escribe tu propia consulta ---": "",
