@@ -63,7 +63,7 @@ opcion = st.sidebar.selectbox(
     ["1. Resumen Ejecutivo", 
      "2. Reportes Analíticos",
      "3. Entorno de Consultas Ad-Hoc",
-     "4. Modelo Relacional (ERD)"]
+     "4. Esquema de SQL SERVER"]
 )
 
 st.divider()
@@ -321,7 +321,7 @@ elif opcion == "3. Entorno de Consultas Ad-Hoc":
                 else:
                     st.info("👈 Utilice el panel lateral izquierdo para configurar la visualización deseada.")
 
-elif opcion == "4. Modelo Relacional (ERD)":
+elif opcion == "4. Esquema de SQL SERVER":
     st.subheader("🕸️ Diagrama de Base de Datos")
     st.write("Representación estructurada generada automáticamente a partir de las restricciones de integridad referencial (Foreign Keys) del esquema actual.")
     

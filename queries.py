@@ -34,8 +34,6 @@ QUERY_FKS = """
     INNER JOIN sys.columns cr ON fkc.referenced_column_id = cr.column_id AND fkc.referenced_object_id = cr.object_id
 """
 
-QUERY_TABLES = "SELECT name AS TableName FROM sys.tables"
-
 QUERY_COLUMNS = """
     SELECT 
         c.TABLE_NAME AS TableName,
