@@ -78,28 +78,63 @@ if opcion == "1. Resumen Ejecutivo":
     with col1:
         st.subheader("📌 Contexto del Proyecto")
         st.markdown("""
-        La seguridad vial representa uno de los principales retos de salud y seguridad pública que enfrentan las grandes ciudades en Estados Unidos. **Chicago**, como tercera ciudad más poblada del país, concentra una densa red de vías urbanas con alto flujo de vehículos, peatones y ciclistas.
-        
+        <div style="text-align: justify;">
+        La seguridad vial representa uno de los principales retos de salud y seguridad pública que enfrentan las grandes ciudades en Estados Unidos. <b>Chicago</b>, como tercera ciudad más poblada del país, concentra una densa red de vías urbanas con alto flujo de vehículos, peatones y ciclistas.
+        <br><br>
         Según datos del Departamento de Transporte de Illinois (2024), la ciudad registra anualmente decenas de miles de siniestros viales. Los accidentes no se distribuyen de manera uniforme, sino que responden a factores como:
-        * Estado de la infraestructura vial.
-        * Condiciones climáticas e Iluminación.
-        * Patrones de movilidad y comportamiento de los conductores.
-        """)
+        <ul>
+            <li>Estado de la infraestructura vial.</li>
+            <li>Condiciones climáticas e Iluminación.</li>
+            <li>Patrones de movilidad y comportamiento de los conductores.</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
         
     with col2:
-        st.info("""
-        **🎯 Sobre la Base de Datos:**
-        Registra accidentes ocurridos en vías públicas bajo la jurisdicción del Departamento de Policía local.
-        
-        Vincula cada siniestro con su contexto físico, ambiental, causal y humano de manera holística, permitiendo identificar patrones temporales, espaciales y causales.
-        """)
+        st.markdown("""
+        <div style="padding: 1rem; border-radius: 0.5rem; background-color: rgba(23, 114, 233, 0.1); border: 1px solid rgba(23, 114, 233, 0.2);">
+            <p style="text-align: justify; margin-bottom: 0;">
+            <b>🎯 Sobre la Base de Datos:</b><br><br>
+            Registra accidentes ocurridos en vías públicas bajo la jurisdicción del Departamento de Policía local.<br><br>
+            Vincula cada siniestro con su contexto físico, ambiental, causal y humano de manera holística, permitiendo identificar patrones temporales, espaciales y causales.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         
     st.markdown("---")
     st.subheader("🚀 Propósito del Análisis")
     st.markdown("""
-    El propósito de esta plataforma es analizar los volúmenes de datos históricos para **apoyar la toma de decisiones estratégicas en materia de políticas públicas y seguridad urbana**, mediante la identificación de factores de riesgo, zonas de alta incidencia y patrones recurrentes.
-    """)
-    st.success("✅ **Caracterizar** los incidentes según su contexto operativo.\n\n✅ **Geolocalizar** zonas de alta siniestralidad.\n\n✅ **Cuantificar el impacto humano** y material asociado a diversas variables.\n\n✅ **Identificar tendencias temporales** para la asignación eficiente de recursos.\n\n✅ **Evaluar causales principales** para la formulación de medidas preventivas.")
+    <p style="text-align: justify;">
+    El propósito de esta plataforma es analizar los volúmenes de datos históricos para <b>apoyar la toma de decisiones estratégicas en materia de políticas públicas y seguridad urbana</b>, mediante la identificación de factores de riesgo, zonas de alta incidencia y patrones recurrentes.
+    </p>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: rgba(39, 174, 96, 0.1); border: 1px solid rgba(39, 174, 96, 0.2); border-radius: 0.5rem; padding: 1rem;">
+        <ul style="list-style: none; padding-left: 0; margin-bottom: 0;">
+            <li style="display: flex; align-items: flex-start; margin-bottom: 0.5rem;">
+                <span style="margin-right: 0.5rem;">✅</span>
+                <span style="text-align: justify;"><b>Caracterizar</b> los incidentes según su contexto operativo.</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; margin-bottom: 0.5rem;">
+                <span style="margin-right: 0.5rem;">✅</span>
+                <span style="text-align: justify;"><b>Geolocalizar</b> zonas de alta siniestralidad.</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; margin-bottom: 0.5rem;">
+                <span style="margin-right: 0.5rem;">✅</span>
+                <span style="text-align: justify;"><b>Cuantificar el impacto humano</b> y material asociado a diversas variables.</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; margin-bottom: 0.5rem;">
+                <span style="margin-right: 0.5rem;">✅</span>
+                <span style="text-align: justify;"><b>Identificar tendencias temporales</b> para la asignación eficiente de recursos.</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; margin-bottom: 0;">
+                <span style="margin-right: 0.5rem;">✅</span>
+                <span style="text-align: justify;"><b>Evaluar causales principales</b> para la formulación de medidas preventivas.</span>
+            </li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 elif opcion == "2. Reportes Analíticos":
     st.subheader("📊 Reportes de Inteligencia de Negocios (BI)")
