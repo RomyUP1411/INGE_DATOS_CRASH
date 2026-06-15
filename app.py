@@ -9,7 +9,7 @@ import queries
 # Esto debe ser lo primero que se ejecuta en Streamlit
 st.set_page_config(page_title="Plataforma de Seguridad Vial", page_icon="📊", layout="wide")
 
-st.title("📊 Plataforma Analítica de Seguridad Vial")
+st.title("📊 Plataforma analítica de seguridad vial")
 st.markdown("Herramienta interactiva para la exploración, visualización y análisis avanzado de siniestros vehiculares.")
 
 # 2. CONEXIÓN A LA BASE DE DATOS
@@ -70,7 +70,7 @@ st.divider()
 
 # 4. LÓGICA DE LAS VISTAS
 if opcion == "1. Resumen Ejecutivo":
-    st.title("🏙️ Análisis de Seguridad Vial en Chicago")
+    st.title("🏙️ Análisis de seguridad vial en Chicago")    
     st.markdown("---")
     
     col1, col2 = st.columns([1.6, 1])
@@ -135,6 +135,9 @@ if opcion == "1. Resumen Ejecutivo":
         </ul>
     </div>
     """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.caption("**Referencia:**  \nIllinois Department of Transportation. (2024). *Crash facts and statistics 2024*.")
 
 elif opcion == "2. Reportes Analíticos":
     st.subheader("📊 Reportes de Inteligencia de Negocios (BI)")
