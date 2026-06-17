@@ -60,7 +60,7 @@ def obtener_datos(query):
 st.sidebar.header("Navegación del Sistema")
 opcion = st.sidebar.selectbox(
     "Seleccione un módulo:",
-    ["1. Resumen Ejecutivo", 
+    ["1. Análisis de seguridad", 
      "2. Reportes Analíticos",
      "3. Entorno de Consultas",
      "4. Esquema de SQL SERVER"]
@@ -69,7 +69,7 @@ opcion = st.sidebar.selectbox(
 st.divider()
 
 # 4. LÓGICA DE LAS VISTAS
-if opcion == "1. Resumen Ejecutivo":
+if opcion == "1. Análisis de seguridad":
     st.title("🏙️ Análisis de seguridad vial en Chicago")    
     st.markdown("---")
     
