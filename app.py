@@ -197,12 +197,12 @@ elif opcion == "2. Reportes Analíticos":
             
             col_opciones = df_reporte.columns.tolist()
             
-            opciones_graficas = ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel", "Mapa de Calor (Calles)"]
+            opciones_graficas = ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel"]
             idx_tipo = opciones_graficas.index(tipo_defecto) if tipo_defecto in opciones_graficas else 0
             tipo_grafico = st.sidebar.selectbox("Seleccione el tipo de visualización:", opciones_graficas, index=idx_tipo)
             
             eje_x, eje_y = None, None
-            if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel", "Mapa de Calor (Calles)"]:
+            if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel"]:
                 idx_x = col_opciones.index(datos_reporte["x"]) if datos_reporte.get("x") in col_opciones else 0
                 eje_x = st.sidebar.selectbox("Eje X (Categorías / Agrupación):", col_opciones, index=idx_x)
                 
@@ -224,9 +224,6 @@ elif opcion == "2. Reportes Analíticos":
                         fig = px.scatter(df_reporte, x=eje_x, y=eje_y, color=color_val if color_val else eje_x)
                     elif tipo_grafico == "Pastel":
                         fig = px.pie(df_reporte, names=eje_x, values=eje_y, hole=0.3)
-                    elif tipo_grafico == "Mapa de Calor (Calles)":
-                        # Usamos Treemap como un mapa de calor conceptual para jerarquías/calles
-                        fig = px.treemap(df_reporte, path=[eje_x], values=eje_y, color=eje_y, color_continuous_scale='Reds')
                     
                     st.plotly_chart(fig, use_container_width=True)
                 except Exception as e:
