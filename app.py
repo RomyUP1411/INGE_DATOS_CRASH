@@ -168,48 +168,52 @@ elif opcion == "2. Reportes Analíticos":
                 st.download_button("📥 Descargar resultados en CSV", data=csv, file_name='reporte.csv', mime='text/csv')
             
             st.divider()
-            st.subheader("🎨 Configuración Visual")
+            
+            # --- CONTROLES EN LA BARRA LATERAL ---
+            st.sidebar.markdown("---")
+            st.sidebar.subheader("🎨 Configuración Visual")
             
             mapa_tipos = {"bar": "Barras", "line": "Líneas", "scatter": "Dispersión", "pie": "Pastel", "none": "Ninguno"}
             tipo_defecto = mapa_tipos.get(datos_reporte.get("chart", "none"), "Ninguno")
             
-            col_controles, col_grafico = st.columns([1, 3])
-            with col_controles:
-                st.write("⚙️ **Opciones de Gráfico**")
-                col_opciones = df_reporte.columns.tolist()
-                
-                opciones_graficas = ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel"]
-                idx_tipo = opciones_graficas.index(tipo_defecto) if tipo_defecto in opciones_graficas else 0
-                tipo_grafico = st.selectbox("Seleccione el tipo de visualización", opciones_graficas, index=idx_tipo)
-                
-                if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel"]:
-                    idx_x = col_opciones.index(datos_reporte["x"]) if datos_reporte.get("x") in col_opciones else 0
-                    eje_x = st.selectbox("Eje X (Categorías)", col_opciones, index=idx_x)
-                    
-                    idx_y = col_opciones.index(datos_reporte["y"]) if datos_reporte.get("y") in col_opciones else (len(col_opciones)-1 if len(col_opciones)>1 else 0)
-                    eje_y = st.selectbox("Eje Y (Métricas)", col_opciones, index=idx_y)
+            col_opciones = df_reporte.columns.tolist()
             
-            with col_grafico:
-                if tipo_grafico != "Ninguno":
-                    try:
-                        # Extraemos el color recomendado por la consulta, si aplica
-                        color_recomendado = datos_reporte.get("color")
-                        color_val = color_recomendado if color_recomendado in col_opciones else None
+            opciones_graficas = ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel", "Mapa de Calor (Calles)"]
+            idx_tipo = opciones_graficas.index(tipo_defecto) if tipo_defecto in opciones_graficas else 0
+            tipo_grafico = st.sidebar.selectbox("Seleccione el tipo de visualización:", opciones_graficas, index=idx_tipo)
+            
+            eje_x, eje_y = None, None
+            if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel", "Mapa de Calor (Calles)"]:
+                idx_x = col_opciones.index(datos_reporte["x"]) if datos_reporte.get("x") in col_opciones else 0
+                eje_x = st.sidebar.selectbox("Eje X (Categorías / Agrupación):", col_opciones, index=idx_x)
+                
+                idx_y = col_opciones.index(datos_reporte["y"]) if datos_reporte.get("y") in col_opciones else (len(col_opciones)-1 if len(col_opciones)>1 else 0)
+                eje_y = st.sidebar.selectbox("Eje Y (Métricas / Tamaño):", col_opciones, index=idx_y)
+            
+            # --- RENDERIZADO DEL GRÁFICO (GRANDE Y EN EL CENTRO) ---
+            if tipo_grafico != "Ninguno":
+                try:
+                    # Extraemos el color recomendado por la consulta, si aplica
+                    color_recomendado = datos_reporte.get("color")
+                    color_val = color_recomendado if color_recomendado in col_opciones else None
 
-                        if tipo_grafico == "Barras":
-                            fig = px.bar(df_reporte, x=eje_x, y=eje_y, color=color_val if color_val else eje_x)
-                        elif tipo_grafico == "Líneas":
-                            fig = px.line(df_reporte, x=eje_x, y=eje_y, markers=True, color=color_val)
-                        elif tipo_grafico == "Dispersión":
-                            fig = px.scatter(df_reporte, x=eje_x, y=eje_y, color=color_val if color_val else eje_x)
-                        elif tipo_grafico == "Pastel":
-                            fig = px.pie(df_reporte, names=eje_x, values=eje_y, hole=0.3)
-                        
-                        st.plotly_chart(fig, use_container_width=True)
-                    except Exception as e:
-                        st.error(f"❌ Error de renderizado visual. Verifique los tipos de datos en las columnas seleccionadas. Detalle: {e}")
-                else:
-                    st.info("👈 Utilice el panel lateral izquierdo para configurar la visualización deseada.")
+                    if tipo_grafico == "Barras":
+                        fig = px.bar(df_reporte, x=eje_x, y=eje_y, color=color_val if color_val else eje_x)
+                    elif tipo_grafico == "Líneas":
+                        fig = px.line(df_reporte, x=eje_x, y=eje_y, markers=True, color=color_val)
+                    elif tipo_grafico == "Dispersión":
+                        fig = px.scatter(df_reporte, x=eje_x, y=eje_y, color=color_val if color_val else eje_x)
+                    elif tipo_grafico == "Pastel":
+                        fig = px.pie(df_reporte, names=eje_x, values=eje_y, hole=0.3)
+                    elif tipo_grafico == "Mapa de Calor (Calles)":
+                        # Usamos Treemap como un mapa de calor conceptual para jerarquías/calles
+                        fig = px.treemap(df_reporte, path=[eje_x], values=eje_y, color=eje_y, color_continuous_scale='Reds')
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                except Exception as e:
+                    st.error(f"❌ Error de renderizado visual. Verifique los tipos de datos en las columnas seleccionadas. Detalle: {e}")
+            else:
+                st.info("👈 Utilice el panel lateral izquierdo para configurar la visualización deseada.")
     except Exception as e:
         st.error(f"❌ Error de base de datos: {e}")
 
@@ -281,38 +285,42 @@ elif opcion == "3. Entorno de Consultas Ad-Hoc":
                 st.download_button("📥 Exportar Extracción (CSV)", data=csv, file_name='extraccion_ad_hoc.csv', mime='text/csv')
             
             st.divider()
-            st.subheader("🎨 Generador Visual Dinámico")
             
-            # Controles a la izquierda (1/4 del ancho) y Gráfico a la derecha (3/4 del ancho)
-            col_controles, col_grafico = st.columns([1, 3])
+            # --- CONTROLES EN LA BARRA LATERAL ---
+            st.sidebar.markdown("---")
+            st.sidebar.subheader("🎨 Configuración Visual Dinámica")
             
-            with col_controles:
-                st.write("⚙️ **Opciones de Gráfico**")
-                col_opciones = df_custom.columns.tolist()
-                tipo_grafico = st.selectbox("Seleccione el tipo de visualización", ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel"])
-                
-                if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel"]:
-                    eje_x = st.selectbox("Eje X (Categorías)", col_opciones, index=0)
-                    eje_y = st.selectbox("Eje Y (Métricas)", col_opciones, index=len(col_opciones)-1 if len(col_opciones)>1 else 0)
+            col_opciones = df_custom.columns.tolist()
+            tipo_grafico = st.sidebar.selectbox(
+                "Seleccione el tipo de visualización:", 
+                ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel", "Mapa de Calor (Calles)"]
+            )
             
-            with col_grafico:
-                if tipo_grafico != "Ninguno":
-                    try:
-                        if tipo_grafico == "Barras":
-                            fig_dinamica = px.bar(df_custom, x=eje_x, y=eje_y, color=eje_x)
-                        elif tipo_grafico == "Líneas":
-                            fig_dinamica = px.line(df_custom, x=eje_x, y=eje_y, markers=True)
-                        elif tipo_grafico == "Dispersión":
-                            # Se eliminó size=eje_y para evitar errores si eje_y no es numérico continuo
-                            fig_dinamica = px.scatter(df_custom, x=eje_x, y=eje_y, color=eje_x)
-                        elif tipo_grafico == "Pastel":
-                            fig_dinamica = px.pie(df_custom, names=eje_x, values=eje_y, hole=0.3)
-                        
-                        st.plotly_chart(fig_dinamica, use_container_width=True)
-                    except Exception as e:
-                        st.error(f"❌ Error de renderizado visual. Verifique los tipos de datos en las columnas. Detalle: {e}")
-                else:
-                    st.info("👈 Utilice el panel lateral izquierdo para configurar la visualización deseada.")
+            eje_x, eje_y = None, None
+            if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel", "Mapa de Calor (Calles)"]:
+                eje_x = st.sidebar.selectbox("Eje X (Categorías / Agrupación):", col_opciones, index=0)
+                eje_y = st.sidebar.selectbox("Eje Y (Métricas / Tamaño):", col_opciones, index=len(col_opciones)-1 if len(col_opciones)>1 else 0)
+            
+            # --- RENDERIZADO DEL GRÁFICO (GRANDE Y EN EL CENTRO) ---
+            if tipo_grafico != "Ninguno":
+                try:
+                    if tipo_grafico == "Barras":
+                        fig_dinamica = px.bar(df_custom, x=eje_x, y=eje_y, color=eje_x)
+                    elif tipo_grafico == "Líneas":
+                        fig_dinamica = px.line(df_custom, x=eje_x, y=eje_y, markers=True)
+                    elif tipo_grafico == "Dispersión":
+                        # Se eliminó size=eje_y para evitar errores si eje_y no es numérico continuo
+                        fig_dinamica = px.scatter(df_custom, x=eje_x, y=eje_y, color=eje_x)
+                    elif tipo_grafico == "Pastel":
+                        fig_dinamica = px.pie(df_custom, names=eje_x, values=eje_y, hole=0.3)
+                    elif tipo_grafico == "Mapa de Calor (Calles)":
+                        fig_dinamica = px.treemap(df_custom, path=[eje_x], values=eje_y, color=eje_y, color_continuous_scale='Reds')
+                    
+                    st.plotly_chart(fig_dinamica, use_container_width=True)
+                except Exception as e:
+                    st.error(f"❌ Error de renderizado visual. Verifique los tipos de datos en las columnas. Detalle: {e}")
+            else:
+                st.info("👈 Utilice el panel lateral izquierdo para configurar la visualización deseada.")
 
 elif opcion == "4. Esquema de SQL SERVER":
     st.subheader("🕸️ Diagrama de Base de Datos")

@@ -65,55 +65,55 @@ CONSULTAS_INTERACTIVAS = {
 # Diccionario estructurado con la consulta y la configuración ideal de su gráfico
 REPORTES_ACADEMICOS = {
     "S6-7: Mayor cantidad de lesionados por tipo de accidente": {
-        "sql": """SELECT c.crash_type, SUM(i.injuries_total) AS total_lesionados
+        "sql": """SELECT c.crash_type AS Tipo_Accidente, SUM(i.injuries_total) AS Total_Lesionados
 FROM CRASH c
 INNER JOIN INJURIES i ON c.crash_record_id = i.crash_record_id
 GROUP BY c.crash_type
-ORDER BY total_lesionados DESC;""",
-        "chart": "bar", "x": "crash_type", "y": "total_lesionados", "color": "crash_type"
+ORDER BY Total_Lesionados DESC;""",
+        "chart": "bar", "x": "Tipo_Accidente", "y": "Total_Lesionados", "color": "Tipo_Accidente"
     },
     "S6-7: Calles con accidentes y fuga (Notificados a policía)": {
-        "sql": """SELECT DISTINCT l.street_name
+        "sql": """SELECT DISTINCT l.street_name AS Nombre_Calle
 FROM CRASH c
 INNER JOIN LOCATION l ON c.location_id = l.location_id
 WHERE c.hit_and_run_i = 'Y' AND c.date_police_notified IS NOT NULL
-ORDER BY l.street_name;""",
+ORDER BY Nombre_Calle;""",
         "chart": "none" # Solo es una lista descriptiva
     },
     "S6-7: Condiciones de pavimento con velocidad > 35 mph": {
-        "sql": """SELECT co.roadway_surface_cond, AVG(r.posted_speed_limit) AS velocidad_promedio
+        "sql": """SELECT co.roadway_surface_cond AS Condicion_Superficie, AVG(r.posted_speed_limit) AS Velocidad_Promedio
 FROM CRASH c
 INNER JOIN CONDITIONS co ON c.conditions_id = co.conditions_id
 INNER JOIN ROAD r ON c.road_id = r.road_id
 GROUP BY co.roadway_surface_cond
 HAVING AVG(r.posted_speed_limit) > 20
-ORDER BY velocidad_promedio DESC;""",
-        "chart": "bar", "x": "roadway_surface_cond", "y": "velocidad_promedio", "color": "roadway_surface_cond"
+ORDER BY Velocidad_Promedio DESC;""",
+        "chart": "bar", "x": "Condicion_Superficie", "y": "Velocidad_Promedio", "color": "Condicion_Superficie"
     },
     "S6-7: Climas con > 10,000 accidentes graves y múltiples vehículos": {
-        "sql": """SELECT w.weather_condition, COUNT(c.crash_record_id) AS total_accidentes
+        "sql": """SELECT w.weather_condition AS Condicion_Climatica, COUNT(c.crash_record_id) AS Total_Accidentes
 FROM CRASH c
 INNER JOIN WEATHER w ON c.weather_id = w.weather_id
 WHERE c.damage = 'OVER $1,500' AND c.num_units >= 2
 GROUP BY w.weather_condition
 HAVING COUNT(c.crash_record_id) > 10000
-ORDER BY total_accidentes DESC;""",
-        "chart": "pie", "x": "weather_condition", "y": "total_accidentes", "color": None
+ORDER BY Total_Accidentes DESC;""",
+        "chart": "pie", "x": "Condicion_Climatica", "y": "Total_Accidentes", "color": None
     },
     "S9: Causas de accidente superiores al promedio general": {
         "sql": """WITH AccidentesPorCausa AS (
-    SELECT cc.cause_description, COUNT(*) AS total_accidentes
+    SELECT cc.cause_description AS Descripcion_Causa, COUNT(*) AS Total_Accidentes
     FROM CRASH_CAUSE_DETAIL ccd
     INNER JOIN CAUSE_CATALOG cc ON ccd.cause_id = cc.cause_id
     GROUP BY cc.cause_description
 )
 SELECT * FROM AccidentesPorCausa
-WHERE total_accidentes > (SELECT AVG(total_accidentes * 1.0) FROM AccidentesPorCausa)
-ORDER BY total_accidentes DESC;""",
-        "chart": "bar", "x": "cause_description", "y": "total_accidentes", "color": "total_accidentes"
+WHERE Total_Accidentes > (SELECT AVG(Total_Accidentes * 1.0) FROM AccidentesPorCausa)
+ORDER BY Total_Accidentes DESC;""",
+        "chart": "bar", "x": "Descripcion_Causa", "y": "Total_Accidentes", "color": "Total_Accidentes"
     },
     "S9: Accidentes con lesionados superior al promedio de su clima": {
-        "sql": """SELECT c.crash_record_id, w.weather_condition, i.injuries_total
+        "sql": """SELECT c.crash_record_id AS ID_Accidente, w.weather_condition AS Condicion_Climatica, i.injuries_total AS Total_Lesionados
 FROM CRASH c
 INNER JOIN WEATHER w ON c.weather_id = w.weather_id
 INNER JOIN INJURIES i ON c.crash_record_id = i.crash_record_id
@@ -122,66 +122,66 @@ WHERE i.injuries_total > (
     INNER JOIN INJURIES i2 ON c2.crash_record_id = i2.crash_record_id
     WHERE c2.weather_id = c.weather_id
 );""",
-        "chart": "scatter", "x": "weather_condition", "y": "injuries_total", "color": "weather_condition"
+        "chart": "scatter", "x": "Condicion_Climatica", "y": "Total_Lesionados", "color": "Condicion_Climatica"
     },
     "S9: Calles con más de un accidente con lesiones fatales": {
-        "sql": """SELECT DISTINCT l.street_name
+        "sql": """SELECT DISTINCT l.street_name AS Nombre_Calle
 FROM LOCATION l
 WHERE EXISTS (
     SELECT 1 FROM CRASH c
     INNER JOIN INJURIES i ON c.crash_record_id = i.crash_record_id
     WHERE c.location_id = l.location_id AND i.injuries_fatal > 1
 )
-ORDER BY l.street_name;""",
+ORDER BY Nombre_Calle;""",
         "chart": "none"
     },
     "S9: Condiciones climáticas sin fugas de conductor": {
-        "sql": """SELECT DISTINCT w.weather_condition
+        "sql": """SELECT DISTINCT w.weather_condition AS Condicion_Climatica
 FROM WEATHER w
 WHERE NOT EXISTS (
     SELECT 1 FROM CRASH c
     WHERE c.weather_id = w.weather_id AND c.hit_and_run_i = 'Y'
 )
-ORDER BY w.weather_condition;""",
+ORDER BY Condicion_Climatica;""",
         "chart": "none"
     },
     "S10: Tiempo promedio de notificación a policía por tipo (Horas)": {
-        "sql": """SELECT crash_type, AVG(DATEDIFF(HOUR, crash_date, date_police_notified) * 1.0) AS promedio_horas
+        "sql": """SELECT crash_type AS Tipo_Accidente, AVG(DATEDIFF(HOUR, crash_date, date_police_notified) * 1.0) AS Promedio_Horas
 FROM CRASH
 WHERE date_police_notified IS NOT NULL
 GROUP BY crash_type
-ORDER BY promedio_horas DESC;""",
-        "chart": "bar", "x": "crash_type", "y": "promedio_horas", "color": "promedio_horas"
+ORDER BY Promedio_Horas DESC;""",
+        "chart": "bar", "x": "Tipo_Accidente", "y": "Promedio_Horas", "color": "Promedio_Horas"
     },
     "S10: Accidentes por mes del año": {
-        "sql": """SELECT FORMAT(crash_date, 'yyyy-MM') AS periodo, COUNT(*) AS total_accidentes
+        "sql": """SELECT FORMAT(crash_date, 'yyyy-MM') AS Periodo, COUNT(*) AS Total_Accidentes
 FROM CRASH
 GROUP BY FORMAT(crash_date, 'yyyy-MM')
-ORDER BY periodo;""",
-        "chart": "line", "x": "periodo", "y": "total_accidentes", "color": None
+ORDER BY Periodo;""",
+        "chart": "line", "x": "Periodo", "y": "Total_Accidentes", "color": None
     },
     "S10: Tiempo promedio de notificación por trimestre y tipo (Minutos)": {
-        "sql": """SELECT CHOOSE(DATEPART(QUARTER, c.crash_date), 'Q1','Q2','Q3','Q4') AS trimestre,
-       c.crash_type, AVG(DATEDIFF(MINUTE, c.crash_date, c.date_police_notified) * 1.0) AS promedio_minutos
+        "sql": """SELECT CHOOSE(DATEPART(QUARTER, c.crash_date), 'Q1','Q2','Q3','Q4') AS Trimestre,
+       c.crash_type AS Tipo_Accidente, AVG(DATEDIFF(MINUTE, c.crash_date, c.date_police_notified) * 1.0) AS Promedio_Minutos
 FROM CRASH c
 WHERE c.date_police_notified IS NOT NULL
 GROUP BY DATEPART(QUARTER, c.crash_date), c.crash_type
-ORDER BY trimestre, promedio_minutos DESC;""",
-        "chart": "bar", "x": "trimestre", "y": "promedio_minutos", "color": "crash_type"
+ORDER BY Trimestre, Promedio_Minutos DESC;""",
+        "chart": "bar", "x": "Trimestre", "y": "Promedio_Minutos", "color": "Tipo_Accidente"
     },
     "S10: Climas con alta severidad priorizados para análisis": {
-        "sql": """SELECT w.weather_condition, AVG(i.injuries_total * 1.0) AS promedio_lesionados, COUNT(*) AS total_accidentes
+        "sql": """SELECT w.weather_condition AS Condicion_Climatica, AVG(i.injuries_total * 1.0) AS Promedio_Lesionados, COUNT(*) AS Total_Accidentes
 FROM CRASH c
 INNER JOIN WEATHER w ON c.weather_id = w.weather_id
 INNER JOIN INJURIES i ON c.crash_record_id = i.crash_record_id
 GROUP BY w.weather_condition
 ORDER BY CASE WHEN AVG(i.injuries_total * 1.0) >= 2 THEN 1 WHEN AVG(i.injuries_total * 1.0) >= 1 THEN 2 ELSE 3 END,
-promedio_lesionados DESC;""",
-        "chart": "scatter", "x": "total_accidentes", "y": "promedio_lesionados", "color": "weather_condition"
+Promedio_Lesionados DESC;""",
+        "chart": "scatter", "x": "Total_Accidentes", "y": "Promedio_Lesionados", "color": "Condicion_Climatica"
     },
     "S11: Calles con mayor concentración (Top 5 por tipo)": {
         "sql": """WITH RankingCalles AS (
-    SELECT c.crash_type, l.street_name, COUNT(*) AS total_accidentes,
+    SELECT c.crash_type AS Tipo_Accidente, l.street_name AS Nombre_Calle, COUNT(*) AS Total_Accidentes,
            DENSE_RANK() OVER (PARTITION BY c.crash_type ORDER BY COUNT(*) DESC) AS ranking
     FROM CRASH c
     INNER JOIN LOCATION l ON c.location_id = l.location_id
@@ -189,29 +189,29 @@ promedio_lesionados DESC;""",
 )
 SELECT * FROM RankingCalles
 WHERE ranking <= 5
-ORDER BY crash_type, ranking;""",
-        "chart": "bar", "x": "street_name", "y": "total_accidentes", "color": "crash_type"
+ORDER BY Tipo_Accidente, ranking;""",
+        "chart": "bar", "x": "Nombre_Calle", "y": "Total_Accidentes", "color": "Tipo_Accidente"
     },
     "S11: Evolución de accidentes mes a mes (MoM)": {
         "sql": """WITH AccidentesMensuales AS (
-    SELECT YEAR(crash_date) AS anio_num, MONTH(crash_date) AS mes, COUNT(*) AS total_accidentes
+    SELECT YEAR(crash_date) AS anio_num, MONTH(crash_date) AS mes, COUNT(*) AS Total_Accidentes
     FROM CRASH
     GROUP BY YEAR(crash_date), MONTH(crash_date)
 )
-SELECT CAST(anio_num AS VARCHAR(4)) AS anio, mes, total_accidentes,
-       LAG(total_accidentes) OVER(ORDER BY anio_num, mes) AS accidentes_mes_anterior,
-       total_accidentes - LAG(total_accidentes) OVER(ORDER BY anio_num, mes) AS diferencia
+SELECT CAST(anio_num AS VARCHAR(4)) AS Anio, mes AS Mes, Total_Accidentes,
+       LAG(Total_Accidentes) OVER(ORDER BY anio_num, mes) AS Accidentes_Mes_Anterior,
+       Total_Accidentes - LAG(Total_Accidentes) OVER(ORDER BY anio_num, mes) AS Diferencia
 FROM AccidentesMensuales
-ORDER BY anio_num, mes;""",
-        "chart": "line", "x": "mes", "y": "total_accidentes", "color": "anio"
+ORDER BY anio_num, Mes;""",
+        "chart": "line", "x": "Mes", "y": "Total_Accidentes", "color": "Anio"
     },
     "S11: Participación por condición climática": {
-        "sql": """SELECT w.weather_condition, COUNT(*) AS total_accidentes,
-       FORMAT(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 'N2') + '%' AS participacion
+        "sql": """SELECT w.weather_condition AS Condicion_Climatica, COUNT(*) AS Total_Accidentes,
+       FORMAT(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 'N2') + '%' AS Participacion
 FROM CRASH c
 INNER JOIN WEATHER w ON c.weather_id = w.weather_id
 GROUP BY w.weather_condition
-ORDER BY total_accidentes DESC;""",
-        "chart": "pie", "x": "weather_condition", "y": "total_accidentes", "color": None
+ORDER BY Total_Accidentes DESC;""",
+        "chart": "pie", "x": "Condicion_Climatica", "y": "Total_Accidentes", "color": None
     }
 }
