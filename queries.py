@@ -194,15 +194,15 @@ ORDER BY crash_type, ranking;""",
     },
     "S11: Evolución de accidentes mes a mes (MoM)": {
         "sql": """WITH AccidentesMensuales AS (
-    SELECT YEAR(crash_date) AS anio, MONTH(crash_date) AS mes, COUNT(*) AS total_accidentes
+    SELECT YEAR(crash_date) AS anio_num, MONTH(crash_date) AS mes, COUNT(*) AS total_accidentes
     FROM CRASH
     GROUP BY YEAR(crash_date), MONTH(crash_date)
 )
-SELECT anio, mes, total_accidentes,
-       LAG(total_accidentes) OVER(ORDER BY anio, mes) AS accidentes_mes_anterior,
-       total_accidentes - LAG(total_accidentes) OVER(ORDER BY anio, mes) AS diferencia
+SELECT CAST(anio_num AS VARCHAR(4)) AS anio, mes, total_accidentes,
+       LAG(total_accidentes) OVER(ORDER BY anio_num, mes) AS accidentes_mes_anterior,
+       total_accidentes - LAG(total_accidentes) OVER(ORDER BY anio_num, mes) AS diferencia
 FROM AccidentesMensuales
-ORDER BY anio, mes;""",
+ORDER BY anio_num, mes;""",
         "chart": "line", "x": "mes", "y": "total_accidentes", "color": "anio"
     },
     "S11: Participación por condición climática": {

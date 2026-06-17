@@ -178,7 +178,7 @@ elif opcion == "2. Reportes Analíticos":
                 st.write("⚙️ **Opciones de Gráfico**")
                 col_opciones = df_reporte.columns.tolist()
                 
-                opciones_graficas = ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel", "Mapa (Geolocalización)"]
+                opciones_graficas = ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel"]
                 idx_tipo = opciones_graficas.index(tipo_defecto) if tipo_defecto in opciones_graficas else 0
                 tipo_grafico = st.selectbox("Seleccione el tipo de visualización", opciones_graficas, index=idx_tipo)
                 
@@ -188,25 +188,23 @@ elif opcion == "2. Reportes Analíticos":
                     
                     idx_y = col_opciones.index(datos_reporte["y"]) if datos_reporte.get("y") in col_opciones else (len(col_opciones)-1 if len(col_opciones)>1 else 0)
                     eje_y = st.selectbox("Eje Y (Métricas)", col_opciones, index=idx_y)
-                    
-                elif tipo_grafico == "Mapa (Geolocalización)":
-                    eje_lat = st.selectbox("Dimensión Latitud", col_opciones, index=0)
-                    eje_lon = st.selectbox("Dimensión Longitud", col_opciones, index=min(1, len(col_opciones)-1))
             
             with col_grafico:
                 if tipo_grafico != "Ninguno":
                     try:
+                        # Extraemos el color recomendado por la consulta, si aplica
+                        color_recomendado = datos_reporte.get("color")
+                        color_val = color_recomendado if color_recomendado in col_opciones else None
+
                         if tipo_grafico == "Barras":
-                            fig = px.bar(df_reporte, x=eje_x, y=eje_y, color=eje_x)
+                            fig = px.bar(df_reporte, x=eje_x, y=eje_y, color=color_val if color_val else eje_x)
                         elif tipo_grafico == "Líneas":
-                            fig = px.line(df_reporte, x=eje_x, y=eje_y, markers=True)
+                            fig = px.line(df_reporte, x=eje_x, y=eje_y, markers=True, color=color_val)
                         elif tipo_grafico == "Dispersión":
-                            fig = px.scatter(df_reporte, x=eje_x, y=eje_y, color=eje_y, size=eje_y)
+                            fig = px.scatter(df_reporte, x=eje_x, y=eje_y, color=color_val if color_val else eje_x)
                         elif tipo_grafico == "Pastel":
                             fig = px.pie(df_reporte, names=eje_x, values=eje_y, hole=0.3)
-                        elif tipo_grafico == "Mapa (Geolocalización)":
-                            df_mapa = df_reporte.dropna(subset=[eje_lat, eje_lon])
-                            fig = px.scatter_mapbox(df_mapa, lat=eje_lat, lon=eje_lon, zoom=10, mapbox_style="carto-positron")
+                        
                         st.plotly_chart(fig, use_container_width=True)
                     except Exception as e:
                         st.error(f"❌ Error de renderizado visual. Verifique los tipos de datos en las columnas seleccionadas. Detalle: {e}")
@@ -291,14 +289,11 @@ elif opcion == "3. Entorno de Consultas Ad-Hoc":
             with col_controles:
                 st.write("⚙️ **Opciones de Gráfico**")
                 col_opciones = df_custom.columns.tolist()
-                tipo_grafico = st.selectbox("Seleccione el tipo de visualización", ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel", "Mapa (Geolocalización)"])
+                tipo_grafico = st.selectbox("Seleccione el tipo de visualización", ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel"])
                 
                 if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel"]:
                     eje_x = st.selectbox("Eje X (Categorías)", col_opciones, index=0)
                     eje_y = st.selectbox("Eje Y (Métricas)", col_opciones, index=len(col_opciones)-1 if len(col_opciones)>1 else 0)
-                elif tipo_grafico == "Mapa (Geolocalización)":
-                    eje_lat = st.selectbox("Dimensión Latitud", col_opciones, index=0)
-                    eje_lon = st.selectbox("Dimensión Longitud", col_opciones, index=min(1, len(col_opciones)-1))
             
             with col_grafico:
                 if tipo_grafico != "Ninguno":
@@ -308,12 +303,10 @@ elif opcion == "3. Entorno de Consultas Ad-Hoc":
                         elif tipo_grafico == "Líneas":
                             fig_dinamica = px.line(df_custom, x=eje_x, y=eje_y, markers=True)
                         elif tipo_grafico == "Dispersión":
-                            fig_dinamica = px.scatter(df_custom, x=eje_x, y=eje_y, color=eje_y, size=eje_y)
+                            # Se eliminó size=eje_y para evitar errores si eje_y no es numérico continuo
+                            fig_dinamica = px.scatter(df_custom, x=eje_x, y=eje_y, color=eje_x)
                         elif tipo_grafico == "Pastel":
                             fig_dinamica = px.pie(df_custom, names=eje_x, values=eje_y, hole=0.3)
-                        elif tipo_grafico == "Mapa (Geolocalización)":
-                            df_mapa_custom = df_custom.dropna(subset=[eje_lat, eje_lon])
-                            fig_dinamica = px.scatter_mapbox(df_mapa_custom, lat=eje_lat, lon=eje_lon, zoom=10, mapbox_style="carto-positron")
                         
                         st.plotly_chart(fig_dinamica, use_container_width=True)
                     except Exception as e:
