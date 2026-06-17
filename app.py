@@ -62,7 +62,7 @@ opcion = st.sidebar.selectbox(
     "Seleccione un módulo:",
     ["1. Resumen Ejecutivo", 
      "2. Reportes Analíticos",
-     "3. Entorno de Consultas Ad-Hoc",
+     "3. Entorno de Consultas",
      "4. Esquema de SQL SERVER"]
 )
 
@@ -102,6 +102,25 @@ if opcion == "1. Resumen Ejecutivo":
         """, unsafe_allow_html=True)
         
     st.markdown("---")
+    
+    # --- KPIs RÁPIDOS PARA IMPACTO VISUAL ---
+    try:
+        # Obtenemos datos rápidos para los KPIs usando las consultas existentes en queries.py
+        df_clima = obtener_datos(queries.QUERY_CLIMA)
+        df_lesiones = obtener_datos(queries.QUERY_LESIONES)
+        
+        total_accidentes = df_clima['Total_Accidentes'].sum() if not df_clima.empty else 0
+        total_lesionados = df_lesiones['Total_Lesionados'].sum() if not df_lesiones.empty else 0
+        total_muertes = df_lesiones['Total_Muertes'].sum() if not df_lesiones.empty else 0
+
+        col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
+        col_kpi1.metric("Total de Accidentes Registrados", f"{total_accidentes:,}")
+        col_kpi2.metric("Total de Personas Lesionadas", f"{total_lesionados:,.0f}")
+        col_kpi3.metric("Total de Víctimas Fatales", f"{total_muertes:,.0f}")
+        st.markdown("---")
+    except Exception as e:
+        st.warning("No se pudieron cargar los indicadores rápidos. Verifica la conexión a la base de datos.")
+
     st.subheader("🚀 Propósito del Análisis")
     st.markdown("""
     <p style="text-align: justify;">
@@ -217,8 +236,8 @@ elif opcion == "2. Reportes Analíticos":
     except Exception as e:
         st.error(f"❌ Error de base de datos: {e}")
 
-elif opcion == "3. Entorno de Consultas Ad-Hoc":
-    st.subheader("💻 Entorno de Exploración de Datos Ad-Hoc")
+elif opcion == "3. Entorno de Consultas":
+    st.subheader("💻 Entorno de Exploración de Datos")
     st.write("Interfaz de ejecución de sentencias SQL personalizadas para análisis dinámico.")
     
     # Selector de consultas precargadas
@@ -293,11 +312,11 @@ elif opcion == "3. Entorno de Consultas Ad-Hoc":
             col_opciones = df_custom.columns.tolist()
             tipo_grafico = st.sidebar.selectbox(
                 "Seleccione el tipo de visualización:", 
-                ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel", "Mapa de Calor (Calles)"]
+                ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel"]
             )
             
             eje_x, eje_y = None, None
-            if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel", "Mapa de Calor (Calles)"]:
+            if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel"]:
                 eje_x = st.sidebar.selectbox("Eje X (Categorías / Agrupación):", col_opciones, index=0)
                 eje_y = st.sidebar.selectbox("Eje Y (Métricas / Tamaño):", col_opciones, index=len(col_opciones)-1 if len(col_opciones)>1 else 0)
             
@@ -313,8 +332,6 @@ elif opcion == "3. Entorno de Consultas Ad-Hoc":
                         fig_dinamica = px.scatter(df_custom, x=eje_x, y=eje_y, color=eje_x)
                     elif tipo_grafico == "Pastel":
                         fig_dinamica = px.pie(df_custom, names=eje_x, values=eje_y, hole=0.3)
-                    elif tipo_grafico == "Mapa de Calor (Calles)":
-                        fig_dinamica = px.treemap(df_custom, path=[eje_x], values=eje_y, color=eje_y, color_continuous_scale='Reds')
                     
                     st.plotly_chart(fig_dinamica, use_container_width=True)
                 except Exception as e:
