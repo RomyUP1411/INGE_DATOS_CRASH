@@ -6,34 +6,27 @@ import urllib.parse
 import queries
 
 # 1. CONFIGURACIÓN DE LA PÁGINA
-# Esto debe ser lo primero que se ejecuta en Streamlit
 st.set_page_config(page_title="Plataforma de Seguridad Vial", page_icon="📊", layout="wide")
 
 st.title("📊 Plataforma analítica de seguridad vial")
 st.markdown("Herramienta interactiva para la exploración, visualización y análisis avanzado de siniestros vehiculares.")
 
 # 2. CONEXIÓN A LA BASE DE DATOS
-# st.cache_resource hace que la conexión se abra una sola vez y no cada vez que haces clic
 @st.cache_resource
 def iniciar_conexion():
     server = st.secrets["db_server"]
     database = st.secrets["db_name"]
     
-    # Usar get() permite que las credenciales sean opcionales para usar Autenticación de Windows
     username = st.secrets.get("db_user", "")
     password = st.secrets.get("db_pass", "")
     
-    # Permite especificar el driver desde secrets (por defecto ODBC Driver 17)
-    # Esto es útil por si la PC de la universidad tiene otra versión instalada.
     driver = st.secrets.get("db_driver", "ODBC Driver 17 for SQL Server")
-    driver = driver.replace(" ", "+") # Formato seguro para la URL
+    driver = driver.replace(" ", "+")
 
     if username and password:
-        # Autenticación SQL Server
         password_encoded = urllib.parse.quote_plus(password)
         cadena_conexion = f"mssql+pyodbc://{username}:{password_encoded}@{server}/{database}?driver={driver}&TrustServerCertificate=yes&timeout=10"
     else:
-        # Autenticación de Windows (Trusted_Connection=yes)
         cadena_conexion = f"mssql+pyodbc://@{server}/{database}?driver={driver}&Trusted_Connection=yes&TrustServerCertificate=yes&timeout=10"
         
     motor = sqlalchemy.create_engine(cadena_conexion)
@@ -41,17 +34,14 @@ def iniciar_conexion():
 
 try:
     engine = iniciar_conexion()
-    # Forzamos una conexión de prueba para validar credenciales inmediatamente
     with engine.connect() as conn:
         pass
     st.sidebar.success("✅ Conexión establecida")
 except Exception as e:
     st.sidebar.error(f"❌ Error crítico de conexión: {e}")
-    st.stop() # Detiene la app si no hay conexión
+    st.stop()
 
 # --- FUNCIÓN CACHEADA PARA CONSULTAS ---
-# Esto hace que tu app sea súper rápida y profesional. Si haces la misma consulta, 
-# no vuelve a golpear la base de datos a menos que pase 1 hora (3600 segundos).
 @st.cache_data(ttl=3600, show_spinner="Ejecutando consulta en la BD...")
 def obtener_datos(query):
     return pd.read_sql(query, engine)
@@ -103,9 +93,7 @@ if opcion == "1. Análisis de seguridad":
         
     st.markdown("---")
     
-    # --- KPIs RÁPIDOS PARA IMPACTO VISUAL ---
     try:
-        # Obtenemos datos rápidos para los KPIs usando las consultas existentes en queries.py
         df_clima = obtener_datos(queries.QUERY_CLIMA)
         df_lesiones = obtener_datos(queries.QUERY_LESIONES)
         
@@ -156,7 +144,7 @@ if opcion == "1. Análisis de seguridad":
     """, unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
-    st.caption("**Referencia:**  \nIllinois Department of Transportation. (2024). *Crash facts and statistics 2024*.")
+    st.caption("**Referencia:** \nIllinois Department of Transportation. (2024). *Crash facts and statistics 2024*.")
 
 elif opcion == "2. Reportes Analíticos":
     st.subheader("📊 Reportes de Inteligencia de Negocios (BI)")
@@ -201,33 +189,59 @@ elif opcion == "2. Reportes Analíticos":
             idx_tipo = opciones_graficas.index(tipo_defecto) if tipo_defecto in opciones_graficas else 0
             tipo_grafico = st.sidebar.selectbox("Seleccione el tipo de visualización:", opciones_graficas, index=idx_tipo)
             
-            eje_x, eje_y = None, None
+            eje_x, eje_y = None, []
             if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel"]:
                 idx_x = col_opciones.index(datos_reporte["x"]) if datos_reporte.get("x") in col_opciones else 0
                 eje_x = st.sidebar.selectbox("Eje X (Categorías / Agrupación):", col_opciones, index=idx_x)
                 
-                idx_y = col_opciones.index(datos_reporte["y"]) if datos_reporte.get("y") in col_opciones else (len(col_opciones)-1 if len(col_opciones)>1 else 0)
-                eje_y = st.sidebar.selectbox("Eje Y (Métricas / Tamaño):", col_opciones, index=idx_y)
+                # --- NUEVA LÓGICA MULTI-COLUMNA PARA EJE Y ---
+                # Determinamos la(s) columna(s) por defecto
+                y_defecto_config = datos_reporte.get("y")
+                if isinstance(y_defecto_config, str) and y_defecto_config in col_opciones:
+                    default_y_list = [y_defecto_config]
+                elif isinstance(y_defecto_config, list):
+                    default_y_list = [y for y in y_defecto_config if y in col_opciones]
+                else:
+                    default_y_list = [col_opciones[-1]] if col_opciones else []
+                
+                # Ahora es un MULTISELECT, permitiendo agrupar columnas pivotadas (ej: 2021, 2022, 2023)
+                eje_y = st.sidebar.multiselect("Eje Y (Métricas / Tamaño):", options=col_opciones, default=default_y_list)
             
-            # --- RENDERIZADO DEL GRÁFICO (GRANDE Y EN EL CENTRO) ---
+            # --- RENDERIZADO DEL GRÁFICO ---
             if tipo_grafico != "Ninguno":
-                try:
-                    # Extraemos el color recomendado por la consulta, si aplica
-                    color_recomendado = datos_reporte.get("color")
-                    color_val = color_recomendado if color_recomendado in col_opciones else None
+                if not eje_y:
+                    st.warning("⚠️ Seleccione al menos una métrica en el Eje Y desde la barra lateral.")
+                else:
+                    try:
+                        color_recomendado = datos_reporte.get("color")
+                        color_val = color_recomendado if color_recomendado in col_opciones else None
 
-                    if tipo_grafico == "Barras":
-                        fig = px.bar(df_reporte, x=eje_x, y=eje_y, color=color_val if color_val else eje_x)
-                    elif tipo_grafico == "Líneas":
-                        fig = px.line(df_reporte, x=eje_x, y=eje_y, markers=True, color=color_val)
-                    elif tipo_grafico == "Dispersión":
-                        fig = px.scatter(df_reporte, x=eje_x, y=eje_y, color=color_val if color_val else eje_x)
-                    elif tipo_grafico == "Pastel":
-                        fig = px.pie(df_reporte, names=eje_x, values=eje_y, hole=0.3)
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                except Exception as e:
-                    st.error(f"❌ Error de renderizado visual. Verifique los tipos de datos en las columnas seleccionadas. Detalle: {e}")
+                        if tipo_grafico == "Barras":
+                            if len(eje_y) > 1:
+                                # Modo barmode='group' alinea las barras una al lado de la otra (ej. 2021 | 2022 | 2023)
+                                fig = px.bar(df_reporte, x=eje_x, y=eje_y, barmode='group')
+                            else:
+                                fig = px.bar(df_reporte, x=eje_x, y=eje_y[0], color=color_val if color_val else eje_x)
+                        
+                        elif tipo_grafico == "Líneas":
+                            if len(eje_y) > 1:
+                                fig = px.line(df_reporte, x=eje_x, y=eje_y, markers=True)
+                            else:
+                                fig = px.line(df_reporte, x=eje_x, y=eje_y[0], markers=True, color=color_val)
+                        
+                        elif tipo_grafico == "Dispersión":
+                            if len(eje_y) > 1:
+                                fig = px.scatter(df_reporte, x=eje_x, y=eje_y)
+                            else:
+                                fig = px.scatter(df_reporte, x=eje_x, y=eje_y[0], color=color_val if color_val else eje_x)
+                        
+                        elif tipo_grafico == "Pastel":
+                            # El gráfico de pastel solo soporta 1 métrica en Y
+                            fig = px.pie(df_reporte, names=eje_x, values=eje_y[0], hole=0.3)
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"❌ Error de renderizado visual. Verifique los tipos de datos en las columnas seleccionadas. Detalle: {e}")
             else:
                 st.info("👈 Utilice el panel lateral izquierdo para configurar la visualización deseada.")
     except Exception as e:
@@ -237,32 +251,26 @@ elif opcion == "3. Entorno de Consultas":
     st.subheader("💻 Entorno de Exploración de Datos")
     st.write("Interfaz de ejecución de sentencias SQL personalizadas para análisis dinámico.")
     
-    # Selector de consultas precargadas
     consulta_predefinida = st.selectbox(
         "💡 Seleccione una plantilla o elabore su propia sintaxis:",
         list(queries.CONSULTAS_INTERACTIVAS.keys())
     )
     texto_default = queries.CONSULTAS_INTERACTIVAS[consulta_predefinida]
 
-    # Área de texto para que el usuario escriba su consulta
     query_usuario = st.text_area("Editor de Consultas (Transact-SQL):", value=texto_default, height=200)
     
-    # Inicializar el estado de la sesión si no existe
     if 'df_custom' not in st.session_state:
         st.session_state['df_custom'] = None
 
-    # Botón para ejecutar
     if st.button("🚀 Ejecutar Consulta"):
         if query_usuario.strip() != "":
             try:
                 with st.spinner("Procesando consulta en el motor de base de datos..."):
-                    # Usamos una ejecución manual con SQLAlchemy para manejar columnas duplicadas (ej: en SELECT * con JOIN)
                     with engine.connect() as conn:
                         resultado = conn.execute(sqlalchemy.text(query_usuario))
                         filas = resultado.fetchall()
                         
                         if filas:
-                            # Extraemos los nombres de las columnas y renombramos los duplicados agregando un sufijo
                             columnas = resultado.keys()
                             columnas_limpias = []
                             vistos = {}
@@ -277,7 +285,6 @@ elif opcion == "3. Entorno de Consultas":
                             df_custom = pd.DataFrame(filas, columns=columnas_limpias)
                             st.session_state['df_custom'] = df_custom
                         else:
-                            # Si la consulta se ejecutó pero no trajo resultados (ej. SELECT sin match)
                             st.session_state['df_custom'] = pd.DataFrame()
                 
             except Exception as e:
@@ -286,7 +293,6 @@ elif opcion == "3. Entorno de Consultas":
         else:
             st.warning("⚠️ El área de texto está vacía. Ingrese una instrucción SQL válida.")
             
-    # --- RENDERIZADO FUERA DEL BOTÓN (Para que sea interactivo) ---
     if st.session_state['df_custom'] is not None:
         df_custom = st.session_state['df_custom']
         
@@ -312,27 +318,40 @@ elif opcion == "3. Entorno de Consultas":
                 ["Ninguno", "Barras", "Líneas", "Dispersión", "Pastel"]
             )
             
-            eje_x, eje_y = None, None
+            eje_x, eje_y = None, []
             if tipo_grafico in ["Barras", "Líneas", "Dispersión", "Pastel"]:
                 eje_x = st.sidebar.selectbox("Eje X (Categorías / Agrupación):", col_opciones, index=0)
-                eje_y = st.sidebar.selectbox("Eje Y (Métricas / Tamaño):", col_opciones, index=len(col_opciones)-1 if len(col_opciones)>1 else 0)
+                
+                # --- NUEVA LÓGICA MULTI-COLUMNA PARA EJE Y (Módulo 3) ---
+                default_y = [col_opciones[-1]] if len(col_opciones) > 1 else (col_opciones if col_opciones else [])
+                eje_y = st.sidebar.multiselect("Eje Y (Métricas / Tamaño):", options=col_opciones, default=default_y)
             
-            # --- RENDERIZADO DEL GRÁFICO (GRANDE Y EN EL CENTRO) ---
             if tipo_grafico != "Ninguno":
-                try:
-                    if tipo_grafico == "Barras":
-                        fig_dinamica = px.bar(df_custom, x=eje_x, y=eje_y, color=eje_x)
-                    elif tipo_grafico == "Líneas":
-                        fig_dinamica = px.line(df_custom, x=eje_x, y=eje_y, markers=True)
-                    elif tipo_grafico == "Dispersión":
-                        # Se eliminó size=eje_y para evitar errores si eje_y no es numérico continuo
-                        fig_dinamica = px.scatter(df_custom, x=eje_x, y=eje_y, color=eje_x)
-                    elif tipo_grafico == "Pastel":
-                        fig_dinamica = px.pie(df_custom, names=eje_x, values=eje_y, hole=0.3)
-                    
-                    st.plotly_chart(fig_dinamica, use_container_width=True)
-                except Exception as e:
-                    st.error(f"❌ Error de renderizado visual. Verifique los tipos de datos en las columnas. Detalle: {e}")
+                if not eje_y:
+                    st.warning("⚠️ Seleccione al menos una métrica en el Eje Y desde la barra lateral.")
+                else:
+                    try:
+                        if tipo_grafico == "Barras":
+                            if len(eje_y) > 1:
+                                fig_dinamica = px.bar(df_custom, x=eje_x, y=eje_y, barmode='group')
+                            else:
+                                fig_dinamica = px.bar(df_custom, x=eje_x, y=eje_y[0], color=eje_x)
+                        elif tipo_grafico == "Líneas":
+                            if len(eje_y) > 1:
+                                fig_dinamica = px.line(df_custom, x=eje_x, y=eje_y, markers=True)
+                            else:
+                                fig_dinamica = px.line(df_custom, x=eje_x, y=eje_y[0], markers=True)
+                        elif tipo_grafico == "Dispersión":
+                            if len(eje_y) > 1:
+                                fig_dinamica = px.scatter(df_custom, x=eje_x, y=eje_y)
+                            else:
+                                fig_dinamica = px.scatter(df_custom, x=eje_x, y=eje_y[0], color=eje_x)
+                        elif tipo_grafico == "Pastel":
+                            fig_dinamica = px.pie(df_custom, names=eje_x, values=eje_y[0], hole=0.3)
+                        
+                        st.plotly_chart(fig_dinamica, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"❌ Error de renderizado visual. Verifique los tipos de datos en las columnas. Detalle: {e}")
             else:
                 st.info("👈 Utilice el panel lateral izquierdo para configurar la visualización deseada.")
 
@@ -345,7 +364,6 @@ elif opcion == "4. Esquema de SQL SERVER":
             df_fks = obtener_datos(queries.QUERY_FKS)
             df_cols = obtener_datos(queries.QUERY_COLUMNS)
             
-            # Construimos un string en formato DOT con tablas HTML
             dot_code = 'digraph ERD {\n'
             dot_code += 'rankdir=LR;\n'
             dot_code += 'node [shape=none, fontname="Helvetica", fontsize=10, margin=0];\n'
@@ -355,7 +373,6 @@ elif opcion == "4. Esquema de SQL SERVER":
             for table in tables:
                 table_data = df_cols[df_cols['TableName'] == table]
                 
-                # Definición de la tabla en formato HTML para Graphviz
                 html = f'<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">'
                 html += f'<tr><td bgcolor="#1772E9"><font color="white"><b>{table}</b></font></td></tr>'
                 
@@ -364,12 +381,10 @@ elif opcion == "4. Esquema de SQL SERVER":
                     data_type = row['DataType']
                     is_pk = row['IsPrimaryKey'] == 1
                     
-                    # Verifica si la columna es FK buscando en el dataframe de relaciones
                     is_fk = not df_fks[(df_fks['ParentTable'] == table) & (df_fks['ParentColumn'] == col_name)].empty
                     
                     key_str = " <b>[PK, FK]</b>" if (is_pk and is_fk) else (" <b>[PK]</b>" if is_pk else (" <i>[FK]</i>" if is_fk else ""))
                         
-                    # El "port" permite conectar las flechas directamente a esta fila de la tabla
                     port_name = str(col_name).replace(" ", "_")
                     html += f'<tr><td align="left" port="{port_name}">{col_name}{key_str} <font color="#666666"><i>{data_type}</i></font></td></tr>'
                     
@@ -382,12 +397,10 @@ elif opcion == "4. Esquema de SQL SERVER":
                 ref_table = row["RefTable"]
                 ref_col = str(row["RefColumn"]).replace(" ", "_")
                 
-                # Crea la relación apuntando desde la columna FK directamente a la columna PK
                 dot_code += f'"{parent_table}":"{parent_col}" -> "{ref_table}":"{ref_col}";\n'
                 
             dot_code += '}'
             
-            # Pasamos la cadena de texto directamente a la función nativa de Streamlit
             st.graphviz_chart(dot_code, use_container_width=True)
             
     except Exception as e:
